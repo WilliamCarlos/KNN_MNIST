@@ -210,7 +210,7 @@ def main():
 
 
     #Now, for every point in the test set, conduct knn search and classify as that
-    k = 5 #set k for knn
+    k = 3 #set k for knn
     numCorrect = 0 #used to calculate accuracy
     for i, image in enumerate(unknownImages):
         #old def of p
@@ -228,15 +228,18 @@ def main():
 
         #find the classification with the most votes (if tie, take the first appearance)
         max = 0
+        classification = 0
         for j in range(10):
             if max < voting[j]:
-                max = i
-        classification = max
+                max = voting[j]
+                classification = j
 
         #need to find the max occuring
         # print('the point {} was classified as {}'.format(labels[i], labelsTraining[matches[0]]))
         print('the point {} was classified as {}'.format(unknownLabels[i], classification))
-        if unknownLabels[i]==knownLabels[matches[0]]:
+        #todo: fix classification accuracy printout
+        #if unknownLabels[i]==knownLabels[matches[0]]:
+        if unknownLabels[i]==classification:
             numCorrect = numCorrect+1
         print('classification accuracy: {}'.format(float(numCorrect)/(i+1)))
 
