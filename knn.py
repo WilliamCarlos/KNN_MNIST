@@ -152,60 +152,60 @@ def main():
         # convert 28x28 image to vector in R^784 and add to points
         unknownPointsMatrix[i,:] = unknownImages[i,:,:].flatten('F')  # flatten col order
 
-
-    #TODO: sphereize our known/"training" data
-    #define A (points), and mean shift them
-    avgPointKnown = knownPointsMatrix.sum(axis=0)
-    avgPointKnown = avgPointKnown/60000
-
-    #(meanshifting via matrix tranpose)
-    A = np.transpose(knownPointsMatrix)
-    #A = A - np.matlib.repmap(avgPoint, 1, 60000)
-    #A = A - np.transpose(np.tile(avgPoint, (60000, 1)))
-
-    for a in range(A.shape[1]):
-        A[:,a] = A[:,a] - avgPointKnown
-    A = np.transpose(A)
-
-    # pdb.set_trace()
-    #Break up A using SVD
-    u, s, v = np.linalg.svd(A, full_matrices=False)
-    s = np.diag(s)
-    #pdb.set_trace()
-
-    #calculate P as sqrt(m) * V * sigma^-1  * V^T
-    P = np.sqrt(60000) * v * np.linalg.inv(s) * np.transpose(v)
-
-    #A' = AP, use A' as our new dataset
-    #knownPointsMatrix now contains spherized data
-    knownPointsMatrix = np.matmul(A,P)
-
-
-    # TODO: sphereize our "test"/unclassified/unknown data
-    # define A (points), and mean shift them
-    avgPointUnknown = unknownPointsMatrix.sum(axis=0)
-    avgPointUnknown = avgPointUnknown / 10000
-
-    # (meanshifting via matrix tranpose)
-    aPrime = np.transpose(unknownPointsMatrix)
-    # A = A - np.matlib.repmap(avgPoint, 1, 60000)
-    # A = A - np.transpose(np.tile(avgPoint, (60000, 1)))
-
-    for a in range(aPrime.shape[1]):
-        aPrime[:, a] = aPrime[:, a] - avgPointUnknown
-    aPrime = np.transpose(aPrime)
-
-    # pdb.set_trace()
-    # Break up A using SVD
-    uPrime, sPrime, vPrime = np.linalg.svd(aPrime, full_matrices=False)
-    sPrime = np.diag(sPrime)
-    # pdb.set_trace()
-
-    # calculate P as sqrt(m) * V * sigma^-1  * V^T
-    pPrime = np.sqrt(10000) * vPrime * np.linalg.inv(sPrime) * np.transpose(vPrime)
-    unknownPointsMatrix = np.matmul(aPrime, pPrime)
-
-    # A' = AP, use A' as our new dataset
+    #
+    # #TODO: sphereize our known/"training" data
+    # #define A (points), and mean shift them
+    # avgPointKnown = knownPointsMatrix.sum(axis=0)
+    # avgPointKnown = avgPointKnown/60000
+    #
+    # #(meanshifting via matrix tranpose)
+    # A = np.transpose(knownPointsMatrix)
+    # #A = A - np.matlib.repmap(avgPoint, 1, 60000)
+    # #A = A - np.transpose(np.tile(avgPoint, (60000, 1)))
+    #
+    # for a in range(A.shape[1]):
+    #     A[:,a] = A[:,a] - avgPointKnown
+    # A = np.transpose(A)
+    #
+    # # pdb.set_trace()
+    # #Break up A using SVD
+    # u, s, v = np.linalg.svd(A, full_matrices=False)
+    # s = np.diag(s)
+    # #pdb.set_trace()
+    #
+    # #calculate P as sqrt(m) * V * sigma^-1  * V^T
+    # P = np.sqrt(60000) * v * np.linalg.inv(s) * np.transpose(v)
+    #
+    # #A' = AP, use A' as our new dataset
+    # #knownPointsMatrix now contains spherized data
+    # knownPointsMatrix = np.matmul(A,P)
+    #
+    #
+    # # TODO: sphereize our "test"/unclassified/unknown data
+    # # define A (points), and mean shift them
+    # avgPointUnknown = unknownPointsMatrix.sum(axis=0)
+    # avgPointUnknown = avgPointUnknown / 10000
+    #
+    # # (meanshifting via matrix tranpose)
+    # aPrime = np.transpose(unknownPointsMatrix)
+    # # A = A - np.matlib.repmap(avgPoint, 1, 60000)
+    # # A = A - np.transpose(np.tile(avgPoint, (60000, 1)))
+    #
+    # for a in range(aPrime.shape[1]):
+    #     aPrime[:, a] = aPrime[:, a] - avgPointUnknown
+    # aPrime = np.transpose(aPrime)
+    #
+    # # pdb.set_trace()
+    # # Break up A using SVD
+    # uPrime, sPrime, vPrime = np.linalg.svd(aPrime, full_matrices=False)
+    # sPrime = np.diag(sPrime)
+    # # pdb.set_trace()
+    #
+    # # calculate P as sqrt(m) * V * sigma^-1  * V^T
+    # pPrime = np.sqrt(10000) * vPrime * np.linalg.inv(sPrime) * np.transpose(vPrime)
+    # unknownPointsMatrix = np.matmul(aPrime, pPrime)
+    #
+    # # A' = AP, use A' as our new dataset
  ##todo marker
 
 
