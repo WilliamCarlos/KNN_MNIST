@@ -99,67 +99,72 @@ def main():
     # Read images and labels. This is reading the 10k-element test set
     # (you can also use the other pair of filenames to get the
     # 60k-element training set).
-    images, labels = read_mnist('MNIST_data/t10k-images-idx3-ubyte.gz',
+    unknownImages, unknownLabels = read_mnist('MNIST_data/t10k-images-idx3-ubyte.gz',
                                 'MNIST_data/t10k-labels-idx1-ubyte.gz')
-    imagesTraining, labelsTraining = read_mnist('MNIST_data/train-images-idx3-ubyte.gz',
+    knownImages, knownLabels = read_mnist('MNIST_data/train-images-idx3-ubyte.gz',
                                           'MNIST_data/train-labels-idx1-ubyte.gz')
-
-
 
     # This is a nice way to reshape and rescale the MNIST data
     # (e.g. to feed to PCA, Neural Net, etc.) It converts the data to
     # 32-bit floating point, and then recenters it to be in the [-1,
     # 1] range.
-    classifier_input = images.reshape(-1, IMAGE_SIZE * IMAGE_SIZE).astype(np.float32)
-    classifier_input = classifier_input * (2.0 / 255.0) - 1.0
+    classifier_input_unknown = unknownImages.reshape(-1, IMAGE_SIZE * IMAGE_SIZE).astype(np.float32)
+    classifier_input_unknown = classifier_input_unknown * (2.0 / 255.0) - 1.0
 
-    classifier_input_training = imagesTraining.reshape(-1, IMAGE_SIZE * IMAGE_SIZE).astype(np.float32)
-    classifier_input_training = classifier_input_training * (2.0 / 255.0) - 1.0
+    classifier_input_known = knownImages.reshape(-1, IMAGE_SIZE * IMAGE_SIZE).astype(np.float32)
+    classifier_input_known = classifier_input_known * (2.0 / 255.0) - 1.0
 
     ##################################################
     # Now just display some stuff:
 
-    print(
-    'test images has datatype {}, shape {}, and ranges from {} to {}'.format(
-        images.dtype, images.shape, images.min(), images.max()))
-
-    print(
-    'test input has datatype {}, shape {}, and ranges from {} to {}'.format(
-        classifier_input.dtype, classifier_input.shape,
-        classifier_input.min(), classifier_input.max()))
 
     print(
     'test images has datatype {}, shape {}, and ranges from {} to {}'.format(
-        imagesTraining.dtype, imagesTraining.shape, imagesTraining.min(), imagesTraining.max()))
+        unknownImages.dtype, unknownImages.shape, unknownImages.min(), unknownImages.max()))
 
     print(
     'test input has datatype {}, shape {}, and ranges from {} to {}'.format(
-        classifier_input_training.dtype, classifier_input_training.shape,
-        classifier_input_training.min(), classifier_input_training.max()))
+        classifier_input_unknown.dtype, classifier_input_unknown.shape,
+        classifier_input_unknown.min(), classifier_input_unknown.max()))
+
+    print(
+    'test images has datatype {}, shape {}, and ranges from {} to {}'.format(
+        knownImages.dtype, knownImages.shape, knownImages.min(), knownImages.max()))
+
+    print(
+    'test input has datatype {}, shape {}, and ranges from {} to {}'.format(
+        classifier_input_known.dtype, classifier_input_known.shape,
+        classifier_input_known.min(), classifier_input_known.max()))
 
 
+    #todo: should really be using the format of data in the printlns above
 
-    #print('shape', imagesTraining.shape)
 
-    #will hold 60k images in R^784 format
-    points = np.zeros((60000, IMAGE_SIZE*IMAGE_SIZE))
+    #Initialize vector matrix for training data: will hold 60k images in R^784 format
+    knownPointsMatrix = np.zeros((60000, IMAGE_SIZE*IMAGE_SIZE))
     for i in range(1, 60000):
         #convert 28x28 image to vector in R^784 and add to points
-        points[i,:] = imagesTraining[i,:,:].flatten('F') #flatten col order
+        knownPointsMatrix[i,:] = knownImages[i,:,:].flatten('F') #flatten col order
 
-    #TODO: sphereize our data
+    #Initialize vector matrix for test data:  will hold 10k images in R^784 format
+    unknownPointsMatrix = np.zeros((10000, IMAGE_SIZE * IMAGE_SIZE))
+    for i in range(1, 10000):
+        # convert 28x28 image to vector in R^784 and add to points
+        unknownPointsMatrix[i,:] = unknownImages[i,:,:].flatten('F')  # flatten col order
 
+
+    #TODO: sphereize our known/"training" data
     #define A (points), and mean shift them
-    avgPoint = points.sum(axis=0)
-    avgPoint = avgPoint/60000
+    avgPointKnown = knownPointsMatrix.sum(axis=0)
+    avgPointKnown = avgPointKnown/60000
 
     #(meanshifting via matrix tranpose)
-    A = np.transpose(points)
+    A = np.transpose(knownPointsMatrix)
     #A = A - np.matlib.repmap(avgPoint, 1, 60000)
     #A = A - np.transpose(np.tile(avgPoint, (60000, 1)))
 
     for a in range(A.shape[1]):
-        A[:,a] = A[:,a] - avgPoint
+        A[:,a] = A[:,a] - avgPointKnown
     A = np.transpose(A)
 
     # pdb.set_trace()
@@ -172,21 +177,50 @@ def main():
     P = np.sqrt(60000) * v * np.linalg.inv(s) * np.transpose(v)
 
     #A' = AP, use A' as our new dataset
-    points = np.matmul(A,P)
+    #knownPointsMatrix now contains spherized data
+    knownPointsMatrix = np.matmul(A,P)
+
+
+    # TODO: sphereize our "test"/unclassified/unknown data
+    # define A (points), and mean shift them
+    avgPointUnknown = unknownPointsMatrix.sum(axis=0)
+    avgPointUnknown = avgPointUnknown / 10000
+
+    # (meanshifting via matrix tranpose)
+    unclassifiedA = np.transpose(unknownPointsMatrix)
+    # A = A - np.matlib.repmap(avgPoint, 1, 60000)
+    # A = A - np.transpose(np.tile(avgPoint, (60000, 1)))
+
+    for a in range(unclassifiedA.shape[1]):
+        unclassifiedA[:, a] = unclassifiedA[:, a] - avgPointUnknown
+    unclassifiedA = np.transpose(A)
+
+    # pdb.set_trace()
+    # Break up A using SVD
+    u, s, v = np.linalg.svd(unclassifiedA, full_matrices=False)
+    s = np.diag(s)
+    # pdb.set_trace()
+
+    # calculate P as sqrt(m) * V * sigma^-1  * V^T
+    P = np.sqrt(10000) * v * np.linalg.inv(s) * np.transpose(v)
+    unknownPointsMatrix = np.matmul(A, unclassifiedA)
+
+    # A' = AP, use A' as our new dataset
+ ##todo marker
 
 
     #Now, for every point in the test set, conduct knn search and classify as that
     k = 3 #set k for knn
     numCorrect = 0 #used to calculate accuracy
-    for i, image in enumerate(images):
-        p = images[i,:,:].flatten() #change this so p = flatten(image) #change to test data
-        matches, dist = bruteforce_knn(points, p, k)
+    for i, image in enumerate(unknownImages):
+        p = unknownImages[i,:,:].flatten() #change this so p = flatten(image) #change to test data
+        matches, dist = bruteforce_knn(knownPointsMatrix, p, k)
         #pdb.set_trace()
 
         #create a voting histogram, which holds the # of votes for each class
         voting = np.zeros(10)
         for j in range(k):
-            voting[labelsTraining[matches[j]]] = voting[labelsTraining[matches[j]]] + 1
+            voting[knownLabels[matches[j]]] = voting[knownLabels[matches[j]]] + 1
 
         #find the classification with the most votes (if tie, take the first appearance)
         max = 0
@@ -197,31 +231,29 @@ def main():
 
         #need to find the max occuring
         # print('the point {} was classified as {}'.format(labels[i], labelsTraining[matches[0]]))
-        print('the point {} was classified as {}'.format(labels[i], classification))
-        if labels[i]==labelsTraining[matches[0]]:
+        print('the point {} was classified as {}'.format(unknownLabels[i], classification))
+        if unknownLabels[i]==knownLabels[matches[0]]:
             numCorrect = numCorrect+1
         print('classification accuracy: {}'.format(float(numCorrect)/(i+1)))
 
-    for i, image in enumerate(imagesTraining):
+    for i, image in enumerate(knownImages):
         displayTraining = cv2.resize(image, (8 * IMAGE_SIZE, 8 * IMAGE_SIZE),
                                      interpolation=cv2.INTER_NEAREST)
         print(
-        'image training {} has label {}'.format(i, labelsTraining[i]))
+        'image training {} has label {}'.format(i, knownLabels[i]))
         cv2.imshow('training data', displayTraining)
 
         while np.uint8(cv2.waitKey(5)).view(np.int8) <0: pass
 
 
-    for i, image in enumerate(images):
+    for i, image in enumerate(unknownImages):
         display = cv2.resize(image, (8 * IMAGE_SIZE, 8 * IMAGE_SIZE),
                              interpolation=cv2.INTER_NEAREST)
         print(
-        'image test {} has label {}'.format(i, labels[i]))
+        'image test {} has label {}'.format(i, unknownLabels[i]))
         cv2.imshow('test data', display)
 
         while np.uint8(cv2.waitKey(5)).view(np.int8) < 0: pass
-
-
 
 
 ######################################################################
