@@ -187,33 +187,37 @@ def main():
     avgPointUnknown = avgPointUnknown / 10000
 
     # (meanshifting via matrix tranpose)
-    unclassifiedA = np.transpose(unknownPointsMatrix)
+    aPrime = np.transpose(unknownPointsMatrix)
     # A = A - np.matlib.repmap(avgPoint, 1, 60000)
     # A = A - np.transpose(np.tile(avgPoint, (60000, 1)))
 
-    for a in range(unclassifiedA.shape[1]):
-        unclassifiedA[:, a] = unclassifiedA[:, a] - avgPointUnknown
-    unclassifiedA = np.transpose(A)
+    for a in range(aPrime.shape[1]):
+        aPrime[:, a] = aPrime[:, a] - avgPointUnknown
+    aPrime = np.transpose(aPrime)
 
     # pdb.set_trace()
     # Break up A using SVD
-    u, s, v = np.linalg.svd(unclassifiedA, full_matrices=False)
-    s = np.diag(s)
+    uPrime, sPrime, vPrime = np.linalg.svd(aPrime, full_matrices=False)
+    sPrime = np.diag(sPrime)
     # pdb.set_trace()
 
     # calculate P as sqrt(m) * V * sigma^-1  * V^T
-    P = np.sqrt(10000) * v * np.linalg.inv(s) * np.transpose(v)
-    unknownPointsMatrix = np.matmul(A, unclassifiedA)
+    pPrime = np.sqrt(10000) * vPrime * np.linalg.inv(sPrime) * np.transpose(vPrime)
+    unknownPointsMatrix = np.matmul(aPrime, pPrime)
 
     # A' = AP, use A' as our new dataset
  ##todo marker
 
 
     #Now, for every point in the test set, conduct knn search and classify as that
-    k = 3 #set k for knn
+    k = 5 #set k for knn
     numCorrect = 0 #used to calculate accuracy
     for i, image in enumerate(unknownImages):
-        p = unknownImages[i,:,:].flatten() #change this so p = flatten(image) #change to test data
+        #old def of p
+        #p = unknownImages[i,:,:].flatten() #change this so p = flatten(image) #change to test data
+        p = unknownPointsMatrix[i,:] #i think its row-col and not col-row
+        #pdb.set_trace()
+
         matches, dist = bruteforce_knn(knownPointsMatrix, p, k)
         #pdb.set_trace()
 
